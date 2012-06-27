@@ -1,6 +1,8 @@
 #coding:utf-8
 #siddontang@gmail.com
 
+import traceback
+
 from sgmllib import SGMLParser
 
 class URLLister(SGMLParser):
@@ -8,6 +10,12 @@ class URLLister(SGMLParser):
         SGMLParser.__init__(self)
         self._clear()
 
+
+    def feed(self, data):
+        try:
+            SGMLParser.feed(self, data)
+        except Exception:
+            print 'SGMLParser error %s' % traceback.format_exc() 
         
     def reset(self):
         SGMLParser.reset(self)
