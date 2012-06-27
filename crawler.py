@@ -6,8 +6,7 @@ import time
 from tornado.httpclient import AsyncHTTPClient
 from tornado import ioloop
 
-from greenlet_tornado import greenlet_fetch
-from greenlet_tornado import greenlet_asynchronous
+from greenlet_tornado import *
 
 from urllister import URLLister
 
@@ -21,20 +20,21 @@ class Crawler:
         self._imgs = []
         self._maxTaskNum = 10
         self._taskNum = 0
+        self._ioloop = ioloop.IOLoop()
         
     def run(self, depth):
         self._crawl(self._beginUrl, depth)
 
-        ioloop.IOLoop.instance().add_callback(self._checkTask)
+        self._ioloop.add_timeout(time.time() + 1, self._checkTask)
         
-        ioloop.IOLoop.instance().start()
+        self._ioloop.start()
 
     def getImgs(self):
         return self._imgs
 
     def _checkStop(self):
         if not self._urlTasks and self._taskNum == 0:
-            ioloop.IOLoop.instance().stop()
+            self._ioloop.stop()
             return False
 
         return True
@@ -42,7 +42,7 @@ class Crawler:
     def _checkTask(self):
         if not self._checkStop():
             return
-
+        
         newTaskNum = self._maxTaskNum - self._taskNum
 
         for i in xrange(newTaskNum):
@@ -52,7 +52,7 @@ class Crawler:
             except:
                 break
 
-        ioloop.IOLoop.instance().add_callback(self._checkTask)
+        self._ioloop.add_timeout(time.time() + 1, self._checkTask)
     
     @greenlet_asynchronous
     def _crawl(self, url, depth):
@@ -64,13 +64,14 @@ class Crawler:
 
         self._urlMarked[url] = True
 
-        if self._taskNum >= self._maxTaskNum:
+        if self._taskNum > self._maxTaskNum:
             self._urlTasks.append((url, depth))
             return
 
         self._taskNum = self._taskNum + 1
-        
-        response = greenlet_fetch(url)
+
+        response = greenlet_fetch(self._ioloop, url)
+
         if response.error:
             print 'Error', response.error, url
         else:
@@ -88,7 +89,8 @@ class Crawler:
                 self._crawl(newUrl, depth - 1)
 
         self._taskNum = self._taskNum - 1
-
+        self._checkStop()
+        
 if __name__ == '__main__':
     mainPage = Crawler("http://www.qq.com")
     mainPage.run(1)

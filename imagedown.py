@@ -8,8 +8,7 @@ import hashlib
 from tornado.httpclient import AsyncHTTPClient
 from tornado import ioloop
 
-from greenlet_tornado import greenlet_fetch
-from greenlet_tornado import greenlet_asynchronous
+from greenlet_tornado import *
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
@@ -24,23 +23,25 @@ class ImageDown:
         self._interval = interval
         self._taskNum = 0
         self._maxTaskNum = 10
+
+        self._ioloop = ioloop.IOLoop()
         
     def run(self):
         self._runTasks()
         
-        ioloop.IOLoop.instance().add_timeout(time.time() + self._interval, self._checkTask)
+        self._ioloop.add_timeout(time.time() + self._interval, self._checkTask)
 
-        ioloop.IOLoop.instance().start()
+        self._ioloop.start()
                 
 
     def _checkTask(self):
         if not self._urls and self._taskNum == 0:
-            ioloop.IOLoop.instance().stop()
+            self._ioloop.stop()
             return
             
         self._runTasks()
 
-        ioloop.IOLoop.instance().add_timeout(time.time() + self._interval, self._checkTask)
+        self._ioloop.add_timeout(time.time() + self._interval, self._checkTask)
                 
     def _runTasks(self):
         newTaskNum = self._maxTaskNum - self._taskNum
@@ -57,7 +58,7 @@ class ImageDown:
     def _down(self, url):
         self._taskNum = self._taskNum + 1
         
-        response = greenlet_fetch(url)
+        response = greenlet_fetch(self._ioloop, url)
         if response.error:
             print 'Error', response.error, url
         else:

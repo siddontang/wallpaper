@@ -2,16 +2,19 @@
 import greenlet
 import tornado.httpclient
 import tornado.web
+import tornado.ioloop 
+
 from functools import wraps
 
-def greenlet_fetch(request, **kwargs):
+def greenlet_fetch(io_loop, request, **kwargs):
     gr = greenlet.getcurrent()
     assert gr.parent is not None, "greenlet_fetch() can only be called (possibly indirectly) from a RequestHandler method wrapped by the greenlet_asynchronous decorator."
 
     def callback(response):
         gr.switch(response)
 
-    http_client = tornado.httpclient.AsyncHTTPClient()
+    io_loop = io_loop or tornado.ioloop.IOLoop.instance()
+    http_client = tornado.httpclient.AsyncHTTPClient(io_loop)
     http_client.fetch(request, callback, **kwargs)
 
     response = gr.parent.switch()
