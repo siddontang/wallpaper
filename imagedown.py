@@ -4,7 +4,7 @@
 import os
 import time
 import traceback
-
+import hashlib
 from tornado.httpclient import AsyncHTTPClient
 from tornado import ioloop
 
@@ -12,7 +12,6 @@ from greenlet_tornado import greenlet_fetch
 from greenlet_tornado import greenlet_asynchronous
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
-
 
 class ImageDown:
     def __init__(self, urls, location, interval = 10):
@@ -27,31 +26,31 @@ class ImageDown:
         self._maxTaskNum = 10
         
     def run(self):
-        ioloop.IOLoop.instance().add_timeout(time.time() + self._interval, self._checkTask)
-
         self._runTasks()
         
-        ioloop.IOLoop.instance().start()
-
-    def _checkTask(self):
-        if not self._urls:
-            ioloop.IOLoop.instance().stop()
-    
         ioloop.IOLoop.instance().add_timeout(time.time() + self._interval, self._checkTask)
 
+        ioloop.IOLoop.instance().start()
+                
+
+    def _checkTask(self):
+        if not self._urls and self._taskNum == 0:
+            ioloop.IOLoop.instance().stop()
+            return
+            
         self._runTasks()
 
+        ioloop.IOLoop.instance().add_timeout(time.time() + self._interval, self._checkTask)
+                
     def _runTasks(self):
-        if not self._urls:
-            ioloop.IOLoop.instance().stop()
-
         newTaskNum = self._maxTaskNum - self._taskNum
 
         for i in xrange(newTaskNum):
             try:
                 url = self._urls.pop(0)
                 self._down(url)
-            except:
+            except Exception, e:
+                print e
                 break
         
     @greenlet_asynchronous
@@ -66,21 +65,20 @@ class ImageDown:
             self._writeImage(url, data)
             
         self._taskNum = self._taskNum - 1    
-
+        
     def _writeImage(self, url, data):
         try:
-            fileName = url.split('/')[-1]
+            fileName = (url.split('/')[-1])
+            fileExt = os.path.splitext(fileName)[-1]
             
-            while True:
-                fullName = os.path.join(self._location, fileName)
-                if os.path.exists(fullName):
-                    fileName = '%d_%s' % (int(time.time()), fileName)
-                    fullName = os.path.join(self._location, fileName)
-                else:
-                    break
+            fileName = hashlib.md5(data).hexdigest() + fileExt
 
-            with open(fullName, 'wb') as f:
-                f.write(data)
+            fullName = os.path.join(self._location, fileName)
+
+            if not os.path.exists(fullName):
+                with open(fullName, 'wb') as f:
+                    f.write(data)
+
         except:
             print 'write image %s error %s' % (url, traceback.format_exc())
 
@@ -93,5 +91,5 @@ if __name__ == '__main__':
 
     imgs = mainPage.getImgs()
 
-    imgDown = ImageDown(imgs, './download')
+    imgDown = ImageDown(imgs, './download', 1)
     imgDown.run()
