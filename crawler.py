@@ -4,7 +4,6 @@
 from tornado.httpclient import AsyncHTTPClient
 from tornado import ioloop
 
-
 from greenlet_tornado import greenlet_fetch
 from greenlet_tornado import greenlet_asynchronous
 
