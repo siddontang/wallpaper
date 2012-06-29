@@ -9,6 +9,7 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado import ioloop
 
 from greenlet_tornado import *
+import tornado.curl_httpclient
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
@@ -106,7 +107,7 @@ if __name__ == '__main__':
     imgs = mainPage.getImgs()
 
     cache = UrlCache('urlcache.db')
-    imgDown = ImageDown(imgs, './download',cache , 1)
+    imgDown = ImageDown(imgs, './download',cache,1)
     imgDown.run()
 
     cache.save()
