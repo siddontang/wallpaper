@@ -6,3 +6,4 @@ dist
 *.spec
 warnmain.txt
 out
+cache

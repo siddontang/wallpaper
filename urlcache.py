@@ -4,6 +4,7 @@
 import threading
 import zlib
 import cPickle as pickle
+import os
 
 class UrlCache:
     def __init__(self, dbfile):
@@ -11,6 +12,10 @@ class UrlCache:
         self._rlock = threading.RLock()
         self._file = dbfile
 
+        path = os.path.dirname(self._file)
+        if not os.path.exists(path):
+            os.makedirs(path)
+            
         self.load()
         
     def set(self, url, fileName):
@@ -37,7 +42,7 @@ class UrlCache:
 
 
 if __name__ == '__main__':
-    cache = UrlCache('urlcache.db')
+    cache = UrlCache('./cache/urlcache.db')
 
     for url, fileName in cache._cache.iteritems():
         print url, fileName
